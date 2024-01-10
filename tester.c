@@ -39,7 +39,7 @@ void tester(){
     int nEvents_data = 10000;
     int nEvents_mc = 100000;
 
-    int nTFractionFitter_repetitions = 1;
+    int nTFractionFitter_repetitions = 2;
 
     Double_t P0 = 0.3;  // signal probability
 
@@ -71,7 +71,7 @@ void tester(){
         std::cerr << "Error opening the file!" << std::endl;
         exit(0);
     }
-    outputFile << "BKG PROBABILITY; BKG ERROR; SIGNAL PROBABILITY; SIGNAL ERROR" << std::endl;
+    outputFile << "BKG PROBABILITY; BKG ERROR; SIGNAL PROBABILITY; SIGNAL ERROR; CORR" << std::endl;
 
 
     for (int j = 0; j < nTFractionFitter_repetitions; j++) {
@@ -153,21 +153,30 @@ void tester(){
 	//fit->SetRangeX(1,15);                    // use only the first 15 bins in the fit
 	Int_t status = fitter->Fit();               // perform the fit
 	cout << "fit status: " << status << endl;
-    Double_t p0, p1, err0, err1;
+    Double_t p0, p1, err0, err1, corr_coeff;
 
     // Added covariance matrix 
     TFitResultPtr fit_result = fitter->Fit();
-    TMatrixDSym cov = fit_result->GetCovarianceMatrix();
+    TMatrixDSym corr = fit_result->GetCorrelationMatrix();
+
+    corr_coeff = corr[0][1];
 
     fitter->GetResult(0, p0, err0);
     fitter->GetResult(1, p1, err1);
 
     outputFile << p0 << ";" << err0 << ";";
-    outputFile << p1 << ";" << err1 << endl;
+    outputFile << p1 << ";" << err1 << ";";
+    outputFile << corr_coeff << endl;
 
     }
     outputFile.close();
     std::cout << "Data appended to file successfully!" << std::endl;
+
+    // delete data;
+    // delete bkg;
+    // delete signal;
+    // delete real_bkg;
+    // delete real_signal;
 
     // canvas1->SaveAs("mc_contribution.png");
     // canvas->SaveAs("data_contribution.png");
