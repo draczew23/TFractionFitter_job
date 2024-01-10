@@ -155,6 +155,7 @@ void tester(){
 	cout << "fit status: " << status << endl;
     Double_t p0, p1, err0, err1;
 
+    // Added covariance matrix 
     TFitResultPtr fit_result = fitter->Fit();
     TMatrixDSym cov = fit_result->GetCovarianceMatrix();
 
