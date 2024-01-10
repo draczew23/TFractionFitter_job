@@ -39,7 +39,7 @@ void tester(){
     int nEvents_data = 10000;
     int nEvents_mc = 100000;
 
-    int nTFractionFitter_repetitions = 2;
+    int nTFractionFitter_repetitions = 100;
 
     Double_t P0 = 0.3;  // signal probability
 
@@ -151,15 +151,14 @@ void tester(){
 	fitter->Constrain(1,0.0,1.0);               // constrain fraction 1 to be between 0 and 1
 	fitter->Constrain(0,0.0,1.0);               // constrain fraction 1 to be between 0 and 1
 	//fit->SetRangeX(1,15);                    // use only the first 15 bins in the fit
-	Int_t status = fitter->Fit();               // perform the fit
-	cout << "fit status: " << status << endl;
+	TFitResultPtr fit_result = fitter->Fit();               // perform the fit
+	cout << "fit status: " << fit_result << endl;
     Double_t p0, p1, err0, err1, corr_coeff;
 
     // Added covariance matrix 
-    TFitResultPtr fit_result = fitter->Fit();
     TMatrixDSym corr = fit_result->GetCorrelationMatrix();
 
-    corr_coeff = corr[0][1];
+    corr_coeff = corr(0, 1);
 
     fitter->GetResult(0, p0, err0);
     fitter->GetResult(1, p1, err1);
@@ -172,11 +171,11 @@ void tester(){
     outputFile.close();
     std::cout << "Data appended to file successfully!" << std::endl;
 
-    // delete data;
-    // delete bkg;
-    // delete signal;
-    // delete real_bkg;
-    // delete real_signal;
+    delete data;
+    delete bkg;
+    delete signal;
+    delete real_bkg;
+    delete real_signal;
 
     // canvas1->SaveAs("mc_contribution.png");
     // canvas->SaveAs("data_contribution.png");
