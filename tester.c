@@ -39,7 +39,7 @@ void tester(){
     int nEvents_data = 10000;
     int nEvents_mc = 100000;
 
-    int nTFractionFitter_repetitions = 100;
+    int nTFractionFitter_repetitions = 1;
 
     Double_t P0 = 0.3;  // signal probability
 
@@ -71,7 +71,7 @@ void tester(){
         std::cerr << "Error opening the file!" << std::endl;
         exit(0);
     }
-    outputFile << "BKG PROBABILITY; BKG ERROR; SIGNAL PROBABILITY; SIGNAL ERROR; CORR" << std::endl;
+    outputFile << "BKG PROBABILITY;BKG ERROR;SIGNAL PROBABILITY;SIGNAL ERROR;CORR;MAN_CORR" << std::endl;
 
 
     for (int j = 0; j < nTFractionFitter_repetitions; j++) {
@@ -155,8 +155,35 @@ void tester(){
 	cout << "fit status: " << fit_result << endl;
     Double_t p0, p1, err0, err1, corr_coeff;
 
+    TH1F* result = (TH1F*) fitter->GetPlot();
+    TCanvas *c1 = new TCanvas("c1", "Result Canvas", 1800, 800);
+    c1->Divide(3, 1);
+    c1->cd(1);
+    result->Draw("C");
+    c1->cd(2);
+    data->Draw();
+    // data->SetFillColor(kBlue);    // Blue color for data histogram
+    // result->SetFillColor(kRed); 
+
+
+    // TH1F* r = (TH1F*)data->Clone("r");  // Clone the data histogram
+    // r->Add(result, -1); 
+
+    auto rp1 = new TRatioPlot(data, result, "diffsig");
+    c1->cd(3);
+    rp1->Draw("B");
+    // c1->Update();
+    c1->SaveAs("res.png");
+
     // Added covariance matrix 
     TMatrixDSym corr = fit_result->GetCorrelationMatrix();
+    TMatrixDSym cov = fit_result->GetCovarianceMatrix();
+
+    cout << "first row: " << cov(0, 0) << ' ' << cov(0, 1) << endl;
+    cout << "second row: " << cov(1, 0) << ' ' << cov(1, 1) << endl;
+
+    double man_correlation = cov(1, 0) / sqrt(cov(0, 0) * cov(1, 1));
+    cout << man_correlation << endl;
 
     corr_coeff = corr(0, 1);
 
@@ -165,20 +192,20 @@ void tester(){
 
     outputFile << p0 << ";" << err0 << ";";
     outputFile << p1 << ";" << err1 << ";";
-    outputFile << corr_coeff << endl;
+    outputFile << corr_coeff << ";" << man_correlation << endl;
 
+    // canvas1->SaveAs("mc_contribution.png");
+    // canvas->SaveAs("data_contribution.png");
     }
     outputFile.close();
     std::cout << "Data appended to file successfully!" << std::endl;
 
-    delete data;
-    delete bkg;
-    delete signal;
-    delete real_bkg;
-    delete real_signal;
+    // delete data;
+    // delete bkg;
+    // delete signal;
+    // delete real_bkg;
+    // delete real_signal;
 
-    // canvas1->SaveAs("mc_contribution.png");
-    // canvas->SaveAs("data_contribution.png");
 
     // gApplication->Terminate();
 }
