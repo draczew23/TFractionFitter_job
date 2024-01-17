@@ -36,10 +36,10 @@ Double_t gen_data_prim(Double_t *x, Double_t *params) {
 void tester(){
     gROOT->SetBatch(kTRUE); // No popup window
 
-    int nEvents_data = 10000;
-    int nEvents_mc = 100000;
+    int nEvents_data = 50000;
+    int nEvents_mc = 500000;
 
-    int nTFractionFitter_repetitions = 1;
+    bool if_draw = false;
 
     Double_t P0 = 0.3;  // signal probability
 
@@ -60,9 +60,11 @@ void tester(){
     auto bkg_function = new TF1("gen_mc_prim", gen_mc_prim, 0., 1, 3);
     auto signal_function = new TF1("gen_data_prim", gen_data_prim, 0., 1, 4);
 
+    TFitResultPtr fit_result; 
+    TFractionFitter* fitter;
+
     bkg_function->SetParameters(0.2, 1, 0.105);   // in GeV
     signal_function->SetParameters(0.2, 1, 0.139, 1);
-
 
     // Calculating TfrctionFitter result multiple times
     std::ofstream outputFile("output_new.txt", std::ios::app);
@@ -71,10 +73,7 @@ void tester(){
         std::cerr << "Error opening the file!" << std::endl;
         exit(0);
     }
-    outputFile << "BKG PROBABILITY;BKG ERROR;SIGNAL PROBABILITY;SIGNAL ERROR;CORR;MAN_CORR" << std::endl;
-
-
-    for (int j = 0; j < nTFractionFitter_repetitions; j++) {
+    // outputFile << "BKG PROBABILITY;BKG ERROR;SIGNAL PROBABILITY;SIGNAL ERROR;CORR;MAN_CORR" << std::endl;
 
     // Data generation
     Double_t x, p;
@@ -92,20 +91,27 @@ void tester(){
     }
 
     // generate MC samples
-	bkg->SetXTitle("bkg generated");
-	bkg->SetLineColor(2);
-	bkg->SetMarkerColor(2);
-	bkg->SetMarkerStyle(24);
-	bkg->SetMarkerSize(.7);
+
+    if (if_draw) {
+        bkg->SetXTitle("bkg generated");
+        bkg->SetLineColor(2);
+        bkg->SetMarkerColor(2);
+        bkg->SetMarkerStyle(24);
+        bkg->SetMarkerSize(.7);
+    }
+
 	for( Int_t i=0; i<nEvents_mc; i++) {
 		bkg->Fill(bkg_function->GetRandom() ); 
 	}
 
-	signal->SetXTitle("signal generated");
-	signal->SetLineColor(2);
-	signal->SetMarkerColor(2);
-	signal->SetMarkerStyle(24);
-	signal->SetMarkerSize(.7);
+    if (if_draw){
+        signal->SetXTitle("signal generated");
+        signal->SetLineColor(2);
+        signal->SetMarkerColor(2);
+        signal->SetMarkerStyle(24);
+        signal->SetMarkerSize(.7);
+    }
+
 	for( Int_t i=0; i<nEvents_mc; i++) {
 		signal->Fill(signal_function->GetRandom() ); 
 	}
@@ -147,40 +153,40 @@ void tester(){
 	TObjArray *mc = new TObjArray(2);        // MC histograms are put in this array
 	mc->Add(bkg);
 	mc->Add(signal);
-	TFractionFitter* fitter = new TFractionFitter(data, mc); // initialise
+	fitter = new TFractionFitter(data, mc); // initialise
 	fitter->Constrain(1,0.0,1.0);               // constrain fraction 1 to be between 0 and 1
 	fitter->Constrain(0,0.0,1.0);               // constrain fraction 1 to be between 0 and 1
 	//fit->SetRangeX(1,15);                    // use only the first 15 bins in the fit
-	TFitResultPtr fit_result = fitter->Fit();               // perform the fit
+	fit_result = fitter->Fit();               // perform the fit
 	cout << "fit status: " << fit_result << endl;
     Double_t p0, p1, err0, err1, corr_coeff;
 
     TH1F* result = (TH1F*) fitter->GetPlot();
     TCanvas *c1 = new TCanvas("c1", "Result Canvas", 1800, 800);
+
     c1->Divide(3, 1);
     c1->cd(1);
+    result->SetTitle("TFraction fit to data");
+    result->SetLineColor(kRed); 
     result->Draw("C");
+
     c1->cd(2);
     data->Draw();
-    // data->SetFillColor(kBlue);    // Blue color for data histogram
-    // result->SetFillColor(kRed); 
-
-
-    // TH1F* r = (TH1F*)data->Clone("r");  // Clone the data histogram
-    // r->Add(result, -1); 
-
     auto rp1 = new TRatioPlot(data, result, "diffsig");
+    
     c1->cd(3);
-    rp1->Draw("B");
-    // c1->Update();
-    c1->SaveAs("res.png");
+    rp1->Draw("C");
+    rp1->GetLowerRefYaxis()->SetTitle("Pull value");
+    rp1->GetUpperRefYaxis()->SetTitle("Entries");
+
+    // c1->SaveAs("res.png");
 
     // Added covariance matrix 
     TMatrixDSym corr = fit_result->GetCorrelationMatrix();
     TMatrixDSym cov = fit_result->GetCovarianceMatrix();
 
-    cout << "first row: " << cov(0, 0) << ' ' << cov(0, 1) << endl;
-    cout << "second row: " << cov(1, 0) << ' ' << cov(1, 1) << endl;
+    // cout << "first row: " << cov(0, 0) << ' ' << cov(0, 1) << endl;
+    // cout << "second row: " << cov(1, 0) << ' ' << cov(1, 1) << endl;
 
     double man_correlation = cov(1, 0) / sqrt(cov(0, 0) * cov(1, 1));
     cout << man_correlation << endl;
@@ -196,15 +202,21 @@ void tester(){
 
     // canvas1->SaveAs("mc_contribution.png");
     // canvas->SaveAs("data_contribution.png");
-    }
+    
     outputFile.close();
     std::cout << "Data appended to file successfully!" << std::endl;
 
-    // delete data;
-    // delete bkg;
-    // delete signal;
-    // delete real_bkg;
-    // delete real_signal;
+    delete fitter;
+    delete canvas1;
+    delete c1;
+    delete mc;
+    delete canvas;
+    delete data;
+    delete bkg;
+    delete signal;
+    delete real_bkg;
+    delete real_signal;
+    delete rp1;
 
 
     // gApplication->Terminate();
