@@ -1,6 +1,10 @@
+// #include "simulation_parameters.h"
+// #include <iostream>
+// #include <string>
+
 void runner() {
 
-    int repetitions = 10000;
+    int repetitions = 1;
 
     std::ofstream outputFile("output_new.txt", std::ios::app);
     if (!outputFile.is_open()) {
@@ -9,7 +13,10 @@ void runner() {
     }
     outputFile << "BKG PROBABILITY;BKG ERROR;SIGNAL PROBABILITY;SIGNAL ERROR;CORR;MAN_CORR" << std::endl;
 
+    double counter = 0;
     for (size_t i = 0; i < repetitions; ++i) {
         gROOT->ProcessLine(".x tester.c");
+        cout << counter/repetitions << endl;
+        counter += 1;
     }
 }

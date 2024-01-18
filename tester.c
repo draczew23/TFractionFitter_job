@@ -36,9 +36,9 @@ Double_t gen_data_prim(Double_t *x, Double_t *params) {
 void tester(){
     gROOT->SetBatch(kTRUE); // No popup window
 
-    int nEvents_data = 50000;
-    int nEvents_mc = 500000;
-
+    int nEvents_data = 1000;
+    int nEvents_mc = 10000;
+    int nBins = 100;
     bool if_draw = false;
 
     Double_t P0 = 0.3;  // signal probability
@@ -50,12 +50,12 @@ void tester(){
     TH1F *signal;   // signal mc
     TH1F *bkg;      // background mc
                                
-    data = new TH1F("data", "Data angle distribution", 100, 0, 1);
-    real_bkg = new TH1F("real_bkg", "real background angle distribution", 100, 0, 1);
-    real_signal = new TH1F("real_signal", "real signal angle distribution", 100, 0, 1);
+    data = new TH1F("data", "Data angle distribution", nBins, 0, 1);
+    real_bkg = new TH1F("real_bkg", "real background angle distribution", nBins, 0, 1);
+    real_signal = new TH1F("real_signal", "real signal angle distribution", nBins, 0, 1);
 
-    bkg = new TH1F("signal", "generated background angle distribution", 100, 0, 1);
-    signal = new TH1F("bkg", "generated signal angle distribution", 100, 0, 1);
+    bkg = new TH1F("signal", "generated background angle distribution", nBins, 0, 1);
+    signal = new TH1F("bkg", "generated signal angle distribution", nBins, 0, 1);
 
     auto bkg_function = new TF1("gen_mc_prim", gen_mc_prim, 0., 1, 3);
     auto signal_function = new TF1("gen_data_prim", gen_data_prim, 0., 1, 4);
