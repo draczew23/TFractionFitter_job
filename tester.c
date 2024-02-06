@@ -1,5 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <numeric>
 
 Double_t gen_mc_prim(Double_t *x, Double_t *params) {
     // Function parameters
@@ -33,11 +35,41 @@ Double_t gen_data_prim(Double_t *x, Double_t *params) {
     return result;
 }
 
+Double_t correlationCoefficient(std::vector<Double_t> X, std::vector<Double_t> Y, int n)
+{
+    Double_t sum_XY = 0.0;
+    Double_t squareSum_X = 0.0;
+    Double_t squareSum_Y = 0.0;
+
+    // // Make sure both X and Y have the same size
+    // if (X.size() != Y.size() || X.size() != n || Y.size() != n) {
+    //     std::cerr << "Error: Input vectors have different sizes!" << std::endl;
+    //     return 0.0; // Return 0 or handle the error appropriately
+    // }
+
+    for (int i = 0; i < n; i++)
+    {
+        // sum of X[i] * Y[i].
+        sum_XY += X[i] * Y[i];
+
+        // sum of square of array elements.
+        squareSum_X += X[i] * X[i];
+        squareSum_Y += Y[i] * Y[i];
+    }
+
+    // Calculate correlation coefficient
+    Double_t corr = (n * sum_XY - std::accumulate(X.begin(), X.end(), 0.0) * std::accumulate(Y.begin(), Y.end(), 0.0)) /
+                    sqrt((n * squareSum_X - std::accumulate(X.begin(), X.end(), 0.0) * std::accumulate(X.begin(), X.end(), 0.0)) *
+                         (n * squareSum_Y - std::accumulate(Y.begin(), Y.end(), 0.0) * std::accumulate(Y.begin(), Y.end(), 0.0)));
+
+    return corr;
+}
+
 void tester(){
     gROOT->SetBatch(kTRUE); // No popup window
 
-    int nEvents_data = 1000;
-    int nEvents_mc = 10000;
+    int nEvents_data = 10000;
+    int nEvents_mc = 100000;
     int nBins = 100;
     bool if_draw = false;
 
@@ -75,6 +107,9 @@ void tester(){
     }
     // outputFile << "BKG PROBABILITY;BKG ERROR;SIGNAL PROBABILITY;SIGNAL ERROR;CORR;MAN_CORR" << std::endl;
 
+    std::vector<Double_t> X;
+    std::vector<Double_t> Y;
+
     // Data generation
     Double_t x, p;
     for (int i = 0; i < nEvents_data; ++i) {
@@ -90,31 +125,37 @@ void tester(){
         data->Fill(x);
     }
 
+
     // generate MC samples
 
-    if (if_draw) {
-        bkg->SetXTitle("bkg generated");
-        bkg->SetLineColor(2);
-        bkg->SetMarkerColor(2);
-        bkg->SetMarkerStyle(24);
-        bkg->SetMarkerSize(.7);
-    }
 
+    bkg->SetXTitle("bkg generated");
+    bkg->SetLineColor(2);
+    bkg->SetMarkerColor(2);
+    bkg->SetMarkerStyle(24);
+    bkg->SetMarkerSize(.7);
+
+    signal->SetXTitle("signal generated");
+    signal->SetLineColor(2);
+    signal->SetMarkerColor(2);
+    signal->SetMarkerStyle(24);
+    signal->SetMarkerSize(.7);
+    
+    // Monte Carlo generation
+    Double_t t, z;
 	for( Int_t i=0; i<nEvents_mc; i++) {
-		bkg->Fill(bkg_function->GetRandom() ); 
+        t = bkg_function->GetRandom();
+        z = signal_function->GetRandom(); 
+		bkg->Fill(t);
+        signal->Fill(z);
+        X.push_back(t); 
+        Y.push_back(z);
 	}
 
-    if (if_draw){
-        signal->SetXTitle("signal generated");
-        signal->SetLineColor(2);
-        signal->SetMarkerColor(2);
-        signal->SetMarkerStyle(24);
-        signal->SetMarkerSize(.7);
-    }
-
-	for( Int_t i=0; i<nEvents_mc; i++) {
-		signal->Fill(signal_function->GetRandom() ); 
-	}
+    Double_t man_corr = correlationCoefficient(X, Y, nEvents_data);
+    cout << "---------" << endl;
+    cout << man_corr << endl;
+    cout << "---------" << endl;
 
     TCanvas *canvas = new TCanvas("canvas", "Data and MC Plots", 1200, 800);
     canvas->Divide(3, 1); // Divide canvas into three pads (two plots side by side)
@@ -124,30 +165,41 @@ void tester(){
     data->SetLineColor(1); 
     data->SetXTitle("cos theta");
     data->Draw();
+    data->GetYaxis()->SetRangeUser(0,200);
 
     canvas->cd(2);
     real_signal->SetLineColor(2);
     real_signal->SetXTitle("cos theta"); 
     real_signal->Draw();
+    real_signal->GetYaxis()->SetRangeUser(0,200);
 
     canvas->cd(3);
     real_bkg->SetLineColor(3); 
     real_bkg->SetXTitle("cos theta");
     real_bkg->Draw();
+    real_bkg->GetYaxis()->SetRangeUser(0,200);
 
     // Draw histograms for data
     TCanvas *canvas1 = new TCanvas("canvas1", "MC Plots", 1200, 800);
-    canvas1->Divide(2, 1); // Divide canvas into three pads (two plots side by side)
+    // canvas1->Divide(3, 1); // Divide canvas into three pads (two plots side by side)
 
-    // Draw MC signal
-    canvas1->cd(1);
-    bkg->SetLineColor(2); 
-    bkg->Draw();
+    real_bkg->SetLineColor(2); 
+    real_bkg->Draw();
 
-    // Draw MC bkg
-    canvas1->cd(2);
-    signal->SetLineColor(3); 
-    signal->Draw();
+    real_signal->SetLineColor(3); 
+    real_signal->Draw("SAME");
+
+    data->SetLineColor(4);
+    data->Draw("SAME");
+
+    TLegend *legend = new TLegend(0.1,0.7,0.48,0.9);
+    legend->AddEntry(real_bkg, "Background", "l");
+    legend->AddEntry(real_signal, "Signal", "l");
+    legend->AddEntry(data, "Data", "l");
+
+    legend->Draw();
+
+    canvas1->SaveAs("comb.pdf");
 
 	// FractionFitter
 	TObjArray *mc = new TObjArray(2);        // MC histograms are put in this array
@@ -179,7 +231,7 @@ void tester(){
     rp1->GetLowerRefYaxis()->SetTitle("Pull value");
     rp1->GetUpperRefYaxis()->SetTitle("Entries");
 
-    // c1->SaveAs("res.png");
+    c1->SaveAs("res.pdf");
 
     // Added covariance matrix 
     TMatrixDSym corr = fit_result->GetCorrelationMatrix();
@@ -201,7 +253,7 @@ void tester(){
     outputFile << corr_coeff << ";" << man_correlation << endl;
 
     // canvas1->SaveAs("mc_contribution.png");
-    // canvas->SaveAs("data_contribution.png");
+    canvas->SaveAs("data_contribution.pdf");
     
     outputFile.close();
     std::cout << "Data appended to file successfully!" << std::endl;
