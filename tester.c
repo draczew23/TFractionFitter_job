@@ -68,6 +68,7 @@ Double_t correlationCoefficient(std::vector<Double_t> X, std::vector<Double_t> Y
 void tester(){
     gROOT->SetBatch(kTRUE); // No popup window
 
+    // ALWAYS THERE ARE 10x MORE MC EVENTS!! 
     int nEvents_data = 10000;
     int nEvents_mc = 100000;
     int nBins = 100;
@@ -125,10 +126,7 @@ void tester(){
         data->Fill(x);
     }
 
-
     // generate MC samples
-
-
     bkg->SetXTitle("bkg generated");
     bkg->SetLineColor(2);
     bkg->SetMarkerColor(2);
@@ -152,7 +150,17 @@ void tester(){
         Y.push_back(z);
 	}
 
-    Double_t man_corr = correlationCoefficient(X, Y, nEvents_data);
+    TCanvas *mc_canvas = new TCanvas("mc_canvas", "MC Plots", 1200, 800);
+    mc_canvas->Divide(2, 1); // Divide canvas into three pads (two plots side by side)
+    mc_canvas->cd(1);
+    signal->Draw();
+
+    mc_canvas->cd(2);
+    bkg->Draw();
+
+    mc_canvas->SaveAs("mc_canvas.pdf");
+
+    Double_t man_corr = correlationCoefficient(X, Y, nEvents_mc);
     cout << "---------" << endl;
     cout << man_corr << endl;
     cout << "---------" << endl;
